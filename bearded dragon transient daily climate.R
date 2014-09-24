@@ -335,7 +335,7 @@ Tbs_ode$datetime<-dates5
           # run with time-invariant model using starting hour conditions + 1/2 hour
           times1<-step # sequence of seconds for a day
           input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-          thresh<-vtmin # threshold body temperature at which time is required (deg C)
+          thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
           Tbs<-onelump(times1,Tc_init,thresh,input)
           dayresults[i+1,8]<-Tbs$Tcf
           
@@ -351,7 +351,7 @@ Tbs_ode$datetime<-dates5
             # run with time-invariant model using starting hour conditions + 1/2 hour
             times1<-step # sequence of seconds for a day
             input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-            thresh<-vtmin # threshold body temperature at which time is required (deg C)
+            thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
             Tbs<-onelump(times1,Tc_init,thresh,input)
             dayresults[i+1,1]<-i*step/60
             dayresults[i+1,2]<-Tbs$Tc
@@ -373,7 +373,7 @@ Tbs_ode$datetime<-dates5
               # run with time-invariant model using starting hour conditions + 1/2 hour
               times1<-step # sequence of seconds for a day
               input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-              thresh<-vtmin # threshold body temperature at which time is required (deg C)
+              thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
               Tbs<-onelump(times1,Tc_init,thresh,input)
               dayresults[i+1,1]<-i*step/60
               dayresults[i+1,2]<-Tbs$Tc
@@ -395,7 +395,7 @@ Tbs_ode$datetime<-dates5
                 # run with time-invariant model using starting hour conditions + 1/2 hour
                 times1<-step # sequence of seconds for a day
                 input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                 Tbs<-onelump(times1,Tc_init,thresh,input)
                 dayresults[i+1,1]<-i*step/60
                 dayresults[i+1,2]<-Tbs$Tc
@@ -406,7 +406,7 @@ Tbs_ode$datetime<-dates5
                 dayresults[i+1,7]<-Tbs$dTc/60
               }else{
                 
-              if(dayresults[i,2]<vtmin & out==0 & dayresults[i,2]<vtmax ){ # hasn't yet emerged, but sun is up so start to bask (really, there would be a threshold before they come out to bask)
+              if(dayresults[i,2]<max(vtmin,Tair_shd+0.5) & out==0 & dayresults[i,2]<vtmax ){ # hasn't yet emerged, but sun is up so start to bask (really, there would be a threshold before they come out to bask)
                 Tc_init<-dayresults[i,2]
                 Qsol<-Qsol_sun
                 Tair<-Tair_sun
@@ -418,7 +418,7 @@ Tbs_ode$datetime<-dates5
                 # run with time-invariant model using starting hour conditions + 1/2 hour
                 times1<-step # sequence of seconds for a day
                 input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                 Tbs<-onelump(times1,Tc_init,thresh,input)
                 dayresults[i+1,1]<-i*step/60
                 dayresults[i+1,2]<-Tbs$Tc
@@ -429,8 +429,8 @@ Tbs_ode$datetime<-dates5
                 dayresults[i+1,7]<-Tbs$dTc/60
                 bask<-1
               }else{ # has emerged, check to see if needs to cool or bask again
-                if(dayresults[i,2]<vtmax & dayresults[i,2] >= vtmin){
-                  if(dayresults[i,5]==3 & dayresults[i,2]>vtmin & dayresults[i,8]>vtmin){ # stay cooling
+                if(dayresults[i,2]<vtmax & dayresults[i,2] >= max(vtmin,Tair_shd+0.5)){
+                  if(dayresults[i,5]==3 & dayresults[i,2]>max(vtmin,Tair_shd+0.5) & dayresults[i,8]>max(vtmin,Tair_shd+0.5)){ # stay cooling
                     Tc_init<-dayresults[i,2]
                     Qsol<-Qsol_shd
                     Tair<-Tair_shd
@@ -442,7 +442,7 @@ Tbs_ode$datetime<-dates5
                     # run with time-invariant model using starting hour conditions + 1/2 hour
                     times1<-step # sequence of seconds for a day
                     input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                    thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                    thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                     Tbs<-onelump(times1,Tc_init,thresh,input)
                     dayresults[i+1,1]<-i*step/60
                     dayresults[i+1,2]<-Tbs$Tc
@@ -463,7 +463,7 @@ Tbs_ode$datetime<-dates5
                     # run with time-invariant model using starting hour conditions + 1/2 hour
                     times1<-step # sequence of seconds for a day
                     input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                    thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                    thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                     Tbs<-onelump(times1,Tc_init,thresh,input)
                     dayresults[i+1,1]<-i*step/60
                     dayresults[i+1,2]<-Tbs$Tc
@@ -475,7 +475,7 @@ Tbs_ode$datetime<-dates5
                     out<-1
                   }
                 }else{ # cooling in shade
-                  if(dayresults[i,2]<vtmin & dayresults[i,2]<vtmax & dayresults[i,8]>=vtmin){ # animal was forced inactive, perhaps in the shift form normal to average silhouette area, so check that the hour before Te value was >= vtmin and if so try basking/foraging again
+                  if(dayresults[i,2]<max(vtmin,Tair_shd+0.5) & dayresults[i,2]<vtmax & dayresults[i,8]>=max(vtmin,Tair_shd+0.5)){ # animal was forced inactive, perhaps in the shift form normal to average silhouette area, so check that the hour before Te value was >= vtmin and if so try basking/foraging again
                     Tc_init<-dayresults[i,2]
                     Qsol<-Qsol_sun
                     Tair<-Tair_sun
@@ -487,7 +487,7 @@ Tbs_ode$datetime<-dates5
                     # run with time-invariant model using starting hour conditions + 1/2 hour
                     times1<-step # sequence of seconds for a day
                     input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                    thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                    thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                     Tbs<-onelump(times1,Tc_init,thresh,input)
                     
                     Qsol<-Qsol_sun
@@ -500,7 +500,7 @@ Tbs_ode$datetime<-dates5
                     # run with time-invariant model using starting hour conditions + 1/2 hour
                     times1<-step # sequence of seconds for a day
                     input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                    thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                    thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                     Tbs2<-onelump(times1,Tc_init,thresh,input)
                     
                     if(Tbs$Tc<vtmax){ # this works so bask
@@ -512,7 +512,7 @@ Tbs_ode$datetime<-dates5
                       dayresults[i+1,6]<-Tbs$tau/60
                       dayresults[i+1,7]<-Tbs$dTc/60
                       # insert option to try forage if not above vtmax and greater than vtmin
-                      if(Tbs2$Tc<vtmax & Tbs2$Tc>vtmin){ # this works so forage
+                      if(Tbs2$Tc<vtmax & Tbs2$Tc>max(vtmin,Tair_shd+0.5)){ # this works so forage
                         dayresults[i+1,1]<-i*step/60
                         dayresults[i+1,2]<-Tbs$Tc
                         dayresults[i+1,3]<-0 #average
@@ -534,7 +534,7 @@ Tbs_ode$datetime<-dates5
                       # run with time-invariant model using starting hour conditions + 1/2 hour
                       times1<-step # sequence of seconds for a day
                       input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                      thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                      thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                       Tbs<-onelump(times1,Tc_init,thresh,input)
                       dayresults[i+1,1]<-i*step/60
                       dayresults[i+1,2]<-Tbs$Tc
@@ -556,7 +556,7 @@ Tbs_ode$datetime<-dates5
                     # run with time-invariant model using starting hour conditions + 1/2 hour
                     times1<-step # sequence of seconds for a day
                     input<-list(kflesh=kflesh,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,Qsol=Qsol,vel=vel,Tair=Tair,Trad=Trad)
-                    thresh<-vtmin # threshold body temperature at which time is required (deg C)
+                    thresh<-max(vtmin,Tair_shd+0.5) # threshold body temperature at which time is required (deg C)
                     Tbs<-onelump(times1,Tc_init,thresh,input)
                     dayresults[i+1,1]<-i*step/60
                     dayresults[i+1,2]<-Tbs$Tc
