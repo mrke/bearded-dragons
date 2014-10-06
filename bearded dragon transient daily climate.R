@@ -17,7 +17,10 @@ ystart<-2013
 yfinish<-2013
 nyears<-yfinish-ystart+1
 
-windfact<-0.2 # factor to multiply predicted wind by
+windfact<-.5 # factor to multiply predicted wind by
+vtmax<-40
+vtmin<-32
+baskthresh<-19
 
 # read in weatherhawk data
 weather_obs<-as.data.frame(read.csv(paste(microin,'/Nov16.csv',sep='')))
@@ -95,7 +98,7 @@ RHf<-approxfun(time3[1:nrow(weather_obs)], weather_obs[,7], rule = 2)
 Tsubf<- approxfun(time, micro_sun[,7], rule = 2)
 
 
-source('/git/OneLumpTrans/OneLumpEvapCond_varenv.R')
+source('/git/OneLumpTrans/OneLumpEvapCond_varenv_beardieTe.R')
 
 # make dates for Tbs vector
 dates3<-seq(ISOdate(2013,11,16,tz=tzone)-3600*12, ISOdate(2013,11,17,tz=tzone)-3600*12, 120)
@@ -136,7 +139,7 @@ abs<-0.74 #animal solar absorptivity
 shape_a<-1. 
 shape_b<-1.1
 shape_c<-0.85
-posture<-'b' # pointing normal 'n' or parallel 'p' to the sun's rays?
+posture<-'n' # pointing normal 'n' or parallel 'p' to the sun's rays?
 q<-0
 skinw<-0
 indata<-list(thresh=thresh,a_sub=a_sub,k_sub=k_sub,kflesh=kflesh,skinw=skinw,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
@@ -147,17 +150,28 @@ Tbs$time<-Tbs$time/(60*60*24) #convert to days
 Tbs$datetime<-dates3
 with(Tbs,plot(Tb~datetime,type='l',col='1',ylim=c(5,60)))
 with(obs_sun,points(te~datetime,col='red',ylim=c(5,60)))
-with(metout,points(TS~dates,col='red',ylim=c(5,60),type='l'))
+posture<-'p' # pointing normal 'n' or parallel 'p' to the sun's rays?
+indata<-list(thresh=thresh,a_sub=a_sub,k_sub=k_sub,kflesh=kflesh,skinw=skinw,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
+Tbs<-as.data.frame(ode(y=c(Tc_init=Tc_init,Tskin=Tskin),times=times2,func=onelump_varenv,parms=indata))
+colnames(Tbs)<-c('time','Tb','Tskin')
+Tbs$time<-Tbs$time/(60*60*24) #convert to days
+Tbs$datetime<-dates3
+with(Tbs,points(Tb~datetime,type='l',col='grey',ylim=c(5,60),lty=1))
+#with(metout,points(TS~dates,col='red',ylim=c(5,60),type='l'))
+
 # now run including the effect of Fred's mass
 cp<-3073 #specific heat of flesh, J/kg-C
 mass<-319
+posture<-'b' # pointing normal 'n' or parallel 'p' to the sun's rays?
 indata<-list(thresh=thresh,a_sub=a_sub,k_sub=k_sub,kflesh=kflesh,skinw=skinw,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
 Tbs<-as.data.frame(ode(y=c(Tc_init=Tc_init,Tskin=Tskin),times=times2,func=onelump_varenv,parms=indata))
 colnames(Tbs)<-c('time','Tb','Tskin')
 Tbs$time<-Tbs$time/(60*60*24) #convert to days
 Tbs$datetime<-dates3
 with(Tbs,points(Tb~datetime,type='l',col='1',lty=2,ylim=c(5,60)))
-
+abline(vtmax,0,col='red',lty=2)
+abline(vtmin,0,col='light blue',lty=2)
+points(Tashdf(times)~Tbs_ode$datetime,type='l',col='blue')
 
 # in tree, zero heat capacity
 
@@ -173,7 +187,7 @@ abs<-0.74 #animal solar absorptivity
 shape_a<-1. 
 shape_b<-1.1
 shape_c<-0.85
-posture<-'b' # pointing normal 'n' or parallel 'p' to the sun's rays?
+posture<-'n' # pointing normal 'n' or parallel 'p' to the sun's rays?
 q<-0
 skinw<-0
 indata<-list(thresh=thresh,a_sub=a_sub,k_sub=k_sub,kflesh=kflesh,skinw=skinw,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
@@ -185,15 +199,28 @@ Tbs$datetime<-dates3
 with(Tbs,plot(Tb~datetime,type='l',col='1',ylim=c(5,60)))
 with(obs_tree,points(te~datetime,col='red',ylim=c(5,60)))
 
+posture<-'p' # pointing normal 'n' or parallel 'p' to the sun's rays?
+indata<-list(thresh=thresh,a_sub=a_sub,k_sub=k_sub,kflesh=kflesh,skinw=skinw,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
+Tbs<-as.data.frame(ode(y=c(Tc_init=Tc_init,Tskin=Tskin),times=times2,func=onelump_varenv,parms=indata))
+colnames(Tbs)<-c('time','Tb','Tskin')
+Tbs$time<-Tbs$time/(60*60*24) #convert to days
+Tbs$datetime<-dates3
+with(Tbs,points(Tb~datetime,type='l',col='grey',ylim=c(5,60),lty=1))
+
+
 # now run including the effect of Fred's mass
 cp<-3073 #specific heat of flesh, J/kg-C
 mass<-319
+posture<-'b' # pointing normal 'n' or parallel 'p' to the sun's rays?
 indata<-list(thresh=thresh,a_sub=a_sub,k_sub=k_sub,kflesh=kflesh,skinw=skinw,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
 Tbs<-as.data.frame(ode(y=c(Tc_init=Tc_init,Tskin=Tskin),times=times2,func=onelump_varenv,parms=indata))
 colnames(Tbs)<-c('time','Tb','Tskin')
 Tbs$time<-Tbs$time/(60*60*24) #convert to days
 Tbs$datetime<-dates3
 with(Tbs,points(Tb~datetime,type='l',col='1',lty=2,ylim=c(5,60)))
+abline(vtmax,0,col='red',lty=2)
+abline(vtmin,0,col='light blue',lty=2)
+points(Tashdf(times)~Tbs_ode$datetime,type='l',col='blue')
 
 source('/git/OneLumpTrans/OneLumpAnalytical.R') # load the analytical one lump model
 source('/git/OneLumpTrans/OneLump_varenv_noskin.R') # load source for ode solver version without evaporation and Tskin
@@ -284,8 +311,9 @@ Tsubf<- approxfun(time, micro_sun[,7], rule = 2)
         
         # plot Tb in open
 if(colourchanger==1){
-  abs<-abs_min
+  abs<-abs_max # show extreme maximum temp
 }
+posture<-'n'
         indata<-list(thresh=vtmax,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
         Tc_init<-weather_obs[1,3]
         Tbs_ode<-as.data.frame(ode(y=Tc_init,times=times,func=onelump_varenv,parms=indata))
@@ -293,7 +321,7 @@ if(colourchanger==1){
         Tbs_ode$time<-Tbs_ode$time/3600
 dates5<-seq(ISOdate(2013,11,16,tz=tzone)-3600*12, ISOdate(2013,11,17,tz=tzone)-3600*12, 10)
 Tbs_ode$datetime<-dates5
-        with(Tbs_ode,plot(Tb~datetime,type='l',col='1',ylim=c(-0,70)))
+        with(Tbs_ode,plot(Tb~datetime,type='l',col='2',ylim=c(5,60)))
         #with(Tbs,points(Tcfinal~time,type='l',col='red',ylim=c(-10,70)))
         abline(vtmax,0,col='red',lty=2)
         abline(vtmin,0,col='light blue',lty=2)
@@ -583,9 +611,9 @@ dayresults$datetime<-dates4[1:length(dates4)-1]
 # read in 'day in the life' data
 dlifeTb<-read.csv('day in the life M6.csv')
 dlifeTb$datetime<-as.POSIXct(dlifeTb$datetime,tz=tzone,format="%d/%m/%Y %H:%M")
-with(dlifeTb,points(Tb~datetime,col='red',ylim=c(5,60))) # plot M6 observations
-with(obs_sun,points(te~datetime,col='orange',ylim=c(5,60))) # plot models in full sun
-
+with(dlifeTb,points(Tb~datetime,col='dark green',ylim=c(5,60),pch=16)) # plot M6 observations
+with(obs_sun,points(te~datetime,col='red',ylim=c(5,60),cex=0.5,pch=3)) # plot models in full sun
+with(obs_tree,points(te~datetime,col='dark blue',ylim=c(5,60),cex=0.5,pch=3)) # plot models in full sun
 
 write.csv(dayresults,'dayresults.csv')
 

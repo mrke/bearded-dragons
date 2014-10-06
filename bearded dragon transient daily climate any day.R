@@ -32,7 +32,7 @@ abs<-0.85 # animal solar absorptivity, no colour change
 colourchanger<-1 # if this is 1, then animal will choose between abs_min and abs_max otherwise just stays at value for abs
 
 
-windfact<-0.2 # factor to multiply predicted wind by
+windfact<-0.5 # factor to multiply predicted wind by
 
 # read in weatherhawk data
 weather_obs<-as.data.frame(read.csv(paste(microin,'/Nov16.csv',sep='')))
@@ -139,8 +139,9 @@ hours<-times/3600
 
 # plot Tb in open
 if(colourchanger==1){
-  abs<-abs_min
+  abs<-abs_max # hottest possible
 }
+posture<-'n' # hottest possible
 indata<-list(thresh=vtmax,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
 Tc_init<-weather_obs[1,3]
 Tbs_ode<-as.data.frame(ode(y=Tc_init,times=times,func=onelump_varenv,parms=indata))
