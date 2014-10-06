@@ -149,7 +149,7 @@ colnames(Tbs_ode)<-c('time','Tb','Tskin','Tcfinal','timethresh')
 Tbs_ode$time<-Tbs_ode$time/3600
 dates5<-seq(ISOdate(paste('20',substr(daystart,1,2),sep=''),substr(daystart,4,5),substr(daystart,7,8),tz=tzone)-3600*12, ISOdate(paste('20',substr(dayfin,1,2),sep=''),substr(dayfin,4,5),substr(dayfin,7,8),tz=tzone)-3600*12+3600*24, 10)
 Tbs_ode$datetime<-dates5
-with(Tbs_ode,plot(Tb~datetime,type='l',col='1',ylim=c(-0,70)))
+with(Tbs_ode,plot(Tb~datetime,type='l',col='1',ylim=c(5,60)))
 #with(Tbs,points(Tcfinal~time,type='l',col='red',ylim=c(-10,70)))
 abline(vtmax,0,col='red',lty=2)
 abline(vtmin,0,col='light blue',lty=2)
