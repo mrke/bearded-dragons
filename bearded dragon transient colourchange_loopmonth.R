@@ -11,6 +11,8 @@ microin<-"microclimate" # subfolder containing the microclimate input data
 # variable 3 increase change by 1% jumps from 1% (0.5% either side) to 18%, from base of 0.76
 
 
+# variable 1: 0.9
+
 # get input microclimate files and read them in
  file.copy('/git/micro_australia/metout.csv',paste(microin,'/metout.csv',sep=""),overwrite=TRUE)
  file.copy('/git/micro_australia/shadmet.csv',paste(microin,'/shadmet.csv',sep=""),overwrite=TRUE)
@@ -118,12 +120,12 @@ pressure<-101325 # air pressure
 
 plotxy<-1
 
-times_sec<-seq(0,3600*23*days,3600) # hours of day in seconds
+times_sec<-seq(0,3600*23*1,3600) # hours of day in seconds
 
-sumstats<-matrix(data = NA, nrow = nrow(metout)/24, ncol = 8, byrow = FALSE, dimnames = NULL)
+sumstats<-matrix(data = NA, nrow = nrow(metout)/24, ncol = 9, byrow = FALSE, dimnames = NULL)
 contourplot<-matrix(data = NA, nrow = nrow(metout), ncol = 5, byrow = FALSE, dimnames = NULL)
 
-for(simday in 1:(nrow(metout)/24)){
+for(simday in 1:1){#(nrow(metout)/24)){
 micro_sun<-subset(micro_sun_all, micro_sun_all$JULDAY==simday)
 micro_shd<-subset(micro_shd_all,micro_shd_all$JULDAY==simday)
 #micro_shd<-subset(micro_shd_all, as.numeric(format(as.POSIXlt(micro_shd_all$dates), "%d"))==simday)
@@ -144,22 +146,6 @@ hours<-times/3600
 
 
 
-# # plot Tb in open
-# if(colourchanger==1){
-#   abs<-abs_max # hottest possible
-# }else{
-#   abs<-abs_ref
-# }
-# posture<-'n' # hottest possible
-# indata<-list(thresh=vtmax,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
-# Tc_init<-micro_sun[1,4]
-# Tbs_ode<-as.data.frame(ode(y=Tc_init,times=times,func=onelump_varenv,parms=indata))
-# colnames(Tbs_ode)<-c('time','Tb','Tskin','Tcfinal','timethresh')
-# Tbs_ode$time<-Tbs_ode$time/3600
- dates5<-seq(ISOdate(paste(substr(ystart,1,2),substr(daystart,1,2),sep=''),substr(daystart,4,5),substr(daystart,7,8),tz=tzone)-3600*12, ISOdate(paste(substr(ystart,1,2),substr(dayfin,1,2),sep=''),substr(dayfin,4,5),substr(dayfin,7,8),tz=tzone)-3600*12+3600*24, 10)
-# Tbs_ode$datetime<-dates5
-
-
 colourchanger<-0
 if(colourchanger==1){
   abs<-abs_max # hottest possible
@@ -167,6 +153,14 @@ if(colourchanger==1){
   abs<-0.85
 }
 
+ posture<-'n' # hottest possible
+ indata<-list(thresh=vtmax,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
+ Tc_init<-micro_sun[1,4]
+ Tbs_ode<-as.data.frame(ode(y=Tc_init,times=times_sec,func=onelump_varenv,parms=indata))
+ colnames(Tbs_ode)<-c('time','Tb','Tskin','Tcfinal','timethresh')
+ Tbs_ode$time<-Tbs_ode$time/3600  
+
+ 
 interval<-24*240 # number of intervals across the day to compute
 step<-(3600*24)/interval
 halfstep<-step/2
@@ -177,6 +171,8 @@ debresults<-matrix(data = NA, nrow = interval*(days+1), ncol = 23, byrow = FALSE
 
 out<-0
 bask<-0
+  
+if(max(Tbs_ode$Tcfinal)>vtmin){ # operative temp greater than vtmin, so try thermoreg  
 for(i in 0:(interval*(days+1)-1)){
   # now select a starting hour in the shade and run model with time-varying environment
   starthr<-i
@@ -482,9 +478,20 @@ for(i in 0:(interval*(days+1)-1)){
     }
   }
   #cat(paste('hour ',hour,' done','\n'))
+
+
 }
-
-
+}else{
+  dayresults[,1]<-seq(0,3600*24-1,step)/60
+  dayresults[,2]<-Tashdf(dayresults[,1])
+  dayresults[,3]<-0
+  dayresults[,4]<-0
+  dayresults[,5]<-0
+  dayresults[,6]<-0
+  dayresults[,7]<-0
+  dayresults[,8]<-0
+  dayresults[,9]<-abs
+}
 hrs<-dayresults[,1]/60
 dates4<-seq(ISOdate(paste(substr(ystart,1,2),substr(daystart,1,2),sep=''),substr(daystart,4,5),substr(daystart,7,8),tz=tzone)-3600*12, ISOdate(paste(substr(ystart,1,2),substr(dayfin,1,2),sep=''),substr(dayfin,4,5),substr(dayfin,7,8),tz=tzone)-3600*12+3600*24, stp)
 dates4<-seq(as.POSIXct(micro_sun[1,1]),as.POSIXct(micro_sun[1,1]+3600*24), stp)
@@ -511,7 +518,8 @@ dates4<-dates4[1:length(dates4)-1]
         active<-active$x/(interval/24)*60
         y <- rle(dayresults[,5])
         maxrun<-max((y$lengths[y$values==1]))/(interval/24)*60
-
+        z <- rle(dayresults[,6])
+        morning.bask<-z$lengths[z$values==1][1]/(interval/24)*60
         active.bouts<-y$lengths[y$values==1]
         total.bouts<-length(active.bouts)
         if(total.bouts>1){
@@ -536,9 +544,10 @@ dates4<-dates4[1:length(dates4)-1]
           midday.bout1<-0
           mean.midday.bout<-0
           arvo.bout<-0
+          morning.bask<-0
         }
         sumact<-sum(active)
-        sumstat<-t(c(micro_sun[1,2],maxrun,sumact,total.bouts,morning.bout,midday.bout1,mean.midday.bout,arvo.bout))
+        sumstat<-t(c(micro_sun[1,2],maxrun,sumact,total.bouts,morning.bask,morning.bout,midday.bout1,mean.midday.bout,arvo.bout))
 
 
 
@@ -575,27 +584,36 @@ abline(vtmin,0,col='light blue',lty=2)
 text(micro_shd[3,1],70,paste("bouts ",round(sumstat[,4],0),sep=""))
 text(micro_shd[3,1],65,paste("maxrun ",round(sumstat[,2],0)," mins",sep=""))
 text(micro_shd[3,1],60,paste("sumact ",round(sumstat[,3],0)," mins",sep=""))
-text(micro_shd[3,1],55,paste("morn ",round(sumstat[,5],0)," mins",sep=""))
-text(micro_shd[3,1],50,paste("mid1 ",round(sumstat[,6],0)," mins",sep=""))  
-text(micro_shd[3,1],45,paste("meanmid ",round(sumstat[,7],0)," mins",sep="")) 
-text(micro_shd[3,1],40,paste("arvo ",round(sumstat[,8],0)," mins",sep="")) 
+text(micro_shd[3,1],55,paste("mornbask ",round(sumstat[,5],0)," mins",sep=""))
+text(micro_shd[3,1],50,paste("mornfor ",round(sumstat[,6],0)," mins",sep=""))
+text(micro_shd[3,1],45,paste("mid1 ",round(sumstat[,7],0)," mins",sep=""))  
+text(micro_shd[3,1],40,paste("meanmid ",round(sumstat[,8],0)," mins",sep="")) 
+text(micro_shd[3,1],35,paste("arvo ",round(sumstat[,9],0)," mins",sep="")) 
 }
   cat(paste('day ',simday,' done \n'),sep="")
 }
         
-      colnames(contourplot)<-c("DOY","hour","forage.time.minute","forage.bout.minute","zen")
-      contourplot<-as.data.frame(contourplot)
-      
-      foraging<-subset(contourplot,forage.time.minute>0)
-      night<-subset(contourplot,zen==90)
+contourplot<-as.data.frame(contourplot)
+sumstats<-as.data.frame(sumstats)
+dates2<-seq(ISOdate(ystart,1,1,tz=tzone)-3600*12, ISOdate((ystart+nyears),1,1,tz=tzone)-3600*13, by="days")
+sumstats<-cbind(dates2,sumstats)
+contourplot<-cbind(dates,contourplot)
+
+colnames(contourplot)<-c("dates","DOY","hour","forage.time.minute","forage.bout.minute","zen")
+colnames(sumstats)<-c("date","doy","maxrun","sumact","bouts","mornbask","mornfor","mid1","meanmid","arvo")
+
+foraging<-subset(contourplot,forage.time.minute>0)
+
+night<-subset(contourplot,zen==90)
 with(night,plot(hour~DOY,pch=15,cex=2,col='dark blue'))
-with(foraging,points(hour~DOY,pch=15,cex=forage.time.minute/30,col='orange'))
-with(foraging,points(hour~DOY,pch=15,cex=forage.bout.minute/30,col='red'))
+with(foraging,points(hour~DOY,pch=15,cex=forage.time.minute/50,col='orange'))
+with(foraging,points(hour~DOY,pch=15,cex=forage.bout.minute/50,col='red'))
 #sumstats
 
 
-colnames(sumstats)<-c("doy","maxrun","sumact","bouts","morn","mid1","meanmid","arvo")
 
+write.csv(sumstats,'sumstats.csv')
+write.csv(contourplot,'MitchellPlot.csv')
 
           
   
