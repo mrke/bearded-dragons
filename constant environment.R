@@ -44,25 +44,27 @@ pctdif<-0.1 # proportion of solar energy that is diffuse (rather than direct bea
 # }
 # }
 data<-read.csv('environmental data.csv') # read in environmental data
+
 for(j in 1:2){ # loop through each posture
+for(k in 1:2){ # loop through each initial temperature
 for(i in 1:nrow(data)){ # loop through each set of environmental conditions
 
   
-  if(j==1){posture<-'n'}else{posture<-'p'} #choos the posture, depending on the loop through j
+  if(j==1){posture<-'n'}else{posture<-'p'} #choose the posture, depending on the loop through j
+  if(k==1){Tc_init<-10}else{Tc_init<-40} #choose the initial temperature, depending on the loop through k
 
   
   # environment
-  Qsol<-data[i,2] #solar radiation, W/m2
-  Zen<-data[i,3] #zenith angle of sun (90 is below horizon), degrees
-  vel<-data[i,4] #wind speed, m/s
-  Tair<-data[i,5] #air temperature, C
-  Tsurf<-data[i,6] #substrate temperature, C
-  Tc_init<-data[i,1] #initial core temperature
+  Qsol<-data[i,1] #solar radiation, W/m2
+  Zen<-data[i,2] #zenith angle of sun (90 is below horizon), degrees
+  vel<-data[i,3] #wind speed, m/s
+  Tair<-data[i,4] #air temperature, C
+  Tsurf<-data[i,5] #substrate temperature, C
   
   #get sky temp
-  cloud<-data[i,8]
-  shade<-data[i,9]
-  RH<-data[i,10]
+  cloud<-data[i,7]
+  shade<-data[i,8]
+  RH<-data[i,9]
   VIEWF<-1
   QRADHL<-0
   TMAXK<-Tair+273.15
@@ -110,19 +112,22 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
   dTbs<-as.data.frame(cbind(times,results$dTc))
   colnames(dTbs)<-c('time','dTb')
   final_temp<-results$Tcf
+  time.to.35<-results$timethresh
+  tau<-results$tau
   Tbs$time<-Tbs$time/60 #convert to minutes
   with(Tbs,{plot(Tb~time,type='l',col='red')})
   with(dTbs,{plot(dTb~time,type='l',col='red')})
-  if(i==1 & j==1){
-    Tpred<-as.data.frame(t(c(final_temp,posture))) # need to bind the predicted temperature with the selected posture, turn it into a data frame and then transpose it so it is a row
+  if(i==1 & j==1 & k==1){
+    Tpred<-as.data.frame(t(c(final_temp,posture,Tc_init,time.to.35,tau))) # need to bind the predicted temperature, time to thresh and tau with the selected posture and initial temp, turn it into a data frame and then transpose it so it is a row
   }else{
-    Tpred<-rbind(Tpred,as.data.frame(t(c(final_temp,posture)))) # row bind it to the previous result
+    Tpred<-rbind(Tpred,as.data.frame(t(c(final_temp,posture,Tc_init,time.to.35,tau)))) # row bind it to the previous result
   }
   cat(i,'\n')
 } #end loop through observations in 'data'
+} #end loop through initial temps
 } #end loop through postures
-data_final<-cbind(Tpred,rbind(data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
-
+data_final<-cbind(Tpred,rbind(data,data,data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
+colnames(data_final)[1:5]<-c('Tcfinal','posture','Tc_init','Time.to.35','tau')
 write.csv(data_final,'results.csv')
 
 
