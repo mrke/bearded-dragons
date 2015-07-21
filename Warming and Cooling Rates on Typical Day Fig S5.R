@@ -27,29 +27,17 @@ FATOSB<-0.4 # configuration factor to substrate
 press<-101325 #atmospheric pressure, pa
 sub_reflect<-0.2 # solar reflectance of substrate
 pctdif<-0.1 # proportion of solar energy that is diffuse (rather than direct beam)
-# 
-# directory<-('/Users/kathleensmith/Desktop/Field Season 2013/Models/Constant model/test/')
-# 
-# directories<-list.dirs('/Users/kathleensmith/Desktop/Field Season 2013/Models/Constant model/test')
-# for(m in 1:length(directories-1)){
-#   files<-list.files(directories[m+1])
-#   
-# for(j in 1:length(files)){
-#   data<-read.csv(paste(directories[m+1],files[j],sep=''))
-#   if(j==1){
-#     alldata<-data[1,]
-#   }else{
-#   alldata<-rbind(data[1,],alldata)
-#   }
-# }
-# }
-data<-read.csv('environmental data.csv') # read in environmental data
+
+absorbs<-c(0.77,0.92)
+
+data<-read.csv('environmental data.csv',stringsAsFactors=FALSE) # read in environmental data
 
 for(j in 1:2){ # loop through each posture
 for(k in 1:2){ # loop through each initial temperature
+for(m in 1:2){ # loop through each absorptivity
 for(i in 1:nrow(data)){ # loop through each set of environmental conditions
 
-  
+  if(m==1){abs<-absorbs[1]}else{abs<-absorbs[2]} #choose absorptivity, depending on the loop through m
   if(j==1){posture<-'n'}else{posture<-'p'} #choose the posture, depending on the loop through j
   if(k==1){Tc_init<-10}else{Tc_init<-40} #choose the initial temperature, depending on the loop through k
 
@@ -109,25 +97,44 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
   results<-onelump(times, Tc_init, thresh, input)
   Tbs<-as.data.frame(cbind(times,results$Tc))
   colnames(Tbs)<-c('time','Tb')
-  dTbs<-as.data.frame(cbind(times,results$dTc))
+  dTbs<-as.data.frame(cbind(times,results$dTc*60)) # rates of change in deg C per min
   colnames(dTbs)<-c('time','dTb')
   final_temp<-results$Tcf
   time.to.35<-results$timethresh
   tau<-results$tau
   Tbs$time<-Tbs$time/60 #convert to minutes
-  with(Tbs,{plot(Tb~time,type='l',col='red')})
-  with(dTbs,{plot(dTb~time,type='l',col='red')})
-  if(i==1 & j==1 & k==1){
-    Tpred<-as.data.frame(t(c(final_temp,posture,Tc_init,time.to.35,tau))) # need to bind the predicted temperature, time to thresh and tau with the selected posture and initial temp, turn it into a data frame and then transpose it so it is a row
+  rate<-if(Tc_init==10){max(dTbs$dTb)}else{min(dTbs$dTb)}
+  #rate<-mean(dTbs$dTb)
+  if(i==1){
+  with(Tbs,{plot(Tb~time,type='l',col=i,ylim=c(0,40),main=paste('abs =',abs,' pos = ',posture,sep=""))})
   }else{
-    Tpred<-rbind(Tpred,as.data.frame(t(c(final_temp,posture,Tc_init,time.to.35,tau)))) # row bind it to the previous result
+  with(Tbs,{points(Tb~time,type='l',col=i,ylim=c(0,40),main=paste('abs =',abs,' pos = ',posture,sep=""))})
+  }
+
+  #with(dTbs,{plot(dTb~time,type='l',col='red')})
+  if(i==1 & j==1 & k==1 & m==1){
+    Tpred<-cbind.data.frame(abs,final_temp,posture,Tc_init,time.to.35,tau,rate) # need to bind the predicted temperature, time to thresh and tau with the selected posture and initial temp, turn it into a data frame and then transpose it so it is a row
+  }else{
+    Tpred<-rbind.data.frame(Tpred,cbind.data.frame(abs,final_temp,posture,Tc_init,time.to.35,tau,rate)) # row bind it to the previous result
   }
   cat(i,'\n')
 } #end loop through observations in 'data'
+} #end loop through absorptivities  
 } #end loop through initial temps
 } #end loop through postures
-data_final<-cbind(Tpred,rbind(data,data,data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
-colnames(data_final)[1:5]<-c('Tcfinal','posture','Tc_init','Time.to.35','tau')
+
+data_final<-cbind.data.frame(rep(seq(8,16),8),Tpred,rbind.data.frame(data,data,data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
+colnames(data_final)[1:8]<-c('hour','absorb','Tcfinal','posture','Tc_init','Time.to.35','tau','rate')
+
+plot(rate~hour,data=subset(data_final,absorb==0.92 & Tc_init==10 & posture=='n'),type='b',col='black',main='warming',ylab='max rate, C/min')
+points(rate~hour,data=subset(data_final,absorb==0.77 & Tc_init==10 & posture=='n'),type='b',col='grey')
+plot(rate~hour,data=subset(data_final,absorb==0.92 & Tc_init==40 & posture=='n'),type='b',col='black',main='cooling',ylab='max rate, C/min')
+points(rate~hour,data=subset(data_final,absorb==0.77 & Tc_init==40 & posture=='n'),type='b',col='grey')
+
+plot(Tcfinal~hour,data=subset(data_final,absorb==0.92 & Tc_init==10 & posture=='n'),type='b',col='black',ylab='Steady State Tb, C')
+points(Tcfinal~hour,data=subset(data_final,absorb==0.77 & Tc_init==10 & posture=='n'),type='b',col='grey')
+
+
 write.csv(data_final,'results.csv')
 
 
