@@ -3,7 +3,7 @@
 # Michael modified it on 1st Aug to work as an analytical model, without evaporation
 onelump_bearded<-function(t,y,thresh,input){
   unlist(input)
-  sigma<-0.0000000567 #Stefan-Boltzman, W/(m.K)
+  sigma<-0.0000000567 #Stefan-Boltzman, W/(m2.K4)
   Zenith<-Zen*pi/180 # zenith angle in radians
   Tc<-y # core temperature, deg C
   Tskin<-y+0.1 # make skin temperature very close to core temperature
@@ -354,14 +354,8 @@ alldata<-cbind(alldata,diff)
 subset(alldata, diff<(-10))
 mean(abs(diff),na.rm=TRUE)
 
-lm_Tb<-with(alldata,(lm(Tpred~ObsTb)))
 r_Tb<-cor(alldata$Tpred,alldata$ObsTb,use="complete")
-lm_Tb_R2<-summary(lm_Tb)$r.squared
-lm_Tb_rmsd<-sqrt(mean(((alldata$ObsTb-alldata$Tpred)^2),na.rm=TRUE))
+Tb_rmsd<-sqrt(mean(((alldata$ObsTb-alldata$Tpred)^2),na.rm=TRUE))
 text(20,50,paste('r = ',round(r_Tb,2),sep=""))
-text(20,55,paste('rmsd = ',round(lm_Tb_rmsd,2),sep=""))
+text(20,55,paste('rmsd = ',round(Tb_rmsd,2),sep=""))
 
-plot(Tpred~ObsTb,data=subset(alldata,Posture=='n'),xlim=c(5,65),ylim=c(5,65))
-abline(0,1)
-plot(Tpred~ObsTb,data=subset(alldata,Posture=='p'),xlim=c(5,65),ylim=c(5,65))
-abline(0,1)
