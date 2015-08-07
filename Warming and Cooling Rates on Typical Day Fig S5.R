@@ -1,5 +1,5 @@
 # Transient model simple environmental transition
-source('../OneLumpTrans/OneLumpAnalytical.R')
+source('OneLumpAnalytical_bearded.R')
 
 # constants
 cp<-4185 #specific heat of flesh, J/kg-C
@@ -33,7 +33,7 @@ absorbs<-c(0.77,0.92)
 data<-read.csv('environmental data.csv',stringsAsFactors=FALSE) # read in environmental data
 
 for(j in 1:2){ # loop through each posture
-for(k in 1:2){ # loop through each initial temperature
+for(k in 1:1){ # loop through each initial temperature
 for(m in 1:2){ # loop through each absorptivity
 for(i in 1:nrow(data)){ # loop through each set of environmental conditions
 
@@ -86,7 +86,7 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
   Trad<-mean(c(Tsurf,TSKY))
   
   
-  mass<-350
+  mass<-500
   q<-0
   kflesh<-0.5
   input<-c(kflesh,q,cp,emis,sigma,Fo_e,rho,abs,lometry,customallom,shape_a,shape_b,shape_c,posture,FATOSK,FATOSB,mass,sub_reflect,pctdif,Qsol,vel,Tair,Trad,Zen)
@@ -123,13 +123,13 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
 } #end loop through initial temps
 } #end loop through postures
 
-data_final<-cbind.data.frame(rep(seq(8,16),8),Tpred,rbind.data.frame(data,data,data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
+data_final<-cbind.data.frame(rep(seq(8,16),4),Tpred,rbind.data.frame(data,data,data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
 colnames(data_final)[1:8]<-c('hour','absorb','Tcfinal','posture','Tc_init','Time.to.35','tau','rate')
 
 plot(rate~hour,data=subset(data_final,absorb==0.92 & Tc_init==10 & posture=='n'),type='b',col='black',main='warming',ylab='max rate, C/min')
 points(rate~hour,data=subset(data_final,absorb==0.77 & Tc_init==10 & posture=='n'),type='b',col='grey')
-plot(rate~hour,data=subset(data_final,absorb==0.92 & Tc_init==40 & posture=='n'),type='b',col='black',main='cooling',ylab='max rate, C/min')
-points(rate~hour,data=subset(data_final,absorb==0.77 & Tc_init==40 & posture=='n'),type='b',col='grey')
+#plot(rate~hour,data=subset(data_final,absorb==0.92 & Tc_init==40 & posture=='n'),type='b',col='black',main='cooling',ylab='max rate, C/min')
+#points(rate~hour,data=subset(data_final,absorb==0.77 & Tc_init==40 & posture=='n'),type='b',col='grey')
 
 plot(Tcfinal~hour,data=subset(data_final,absorb==0.92 & Tc_init==10 & posture=='n'),type='b',col='black',ylab='Steady State Tb, C')
 points(Tcfinal~hour,data=subset(data_final,absorb==0.77 & Tc_init==10 & posture=='n'),type='b',col='grey')
