@@ -358,4 +358,3 @@ r_Tb<-cor(alldata$Tpred,alldata$ObsTb,use="complete")
 Tb_rmsd<-sqrt(mean(((alldata$ObsTb-alldata$Tpred)^2),na.rm=TRUE))
 text(20,50,paste('r = ',round(r_Tb,2),sep=""))
 text(20,55,paste('rmsd = ',round(Tb_rmsd,2),sep=""))
-
