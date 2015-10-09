@@ -2,7 +2,7 @@
 library(deSolve)
 
 # key parameters to play with
-microin<-"microclimate" # subfolder containing the microclimate input data
+microin<-"microclimate/Alice Springs" # subfolder containing the microclimate input data
 mass<-319 # grams
 vtmax<-38 # voluntary maximum Tb
 vtmin<-32 # voluntary minimum Tb
@@ -11,15 +11,15 @@ baskthresh<-18 # min temp before animal will move to a basking spot
 abs_min<-0.62 # minimum animal solar absorptivity
 abs_max<-0.90 # maximum animal solar absorptivity
 abs_ref<-0.76 # animal solar absorptivity, no colour change
-colour_rate<-0.05/60 # rate of increase or decrease in absorptivity, proportion/second
+colour_rate<-0.5/60 # rate of increase or decrease in absorptivity, proportion/second
 colourchanger<-1 # 1 or 0
 simstart<-1 # day of year to start simulation
-simfinish<-1 # day of year to finish simulation
+simfinish<-31 # day of year to finish simulation
+ystart<-1997 # start year
+yfinish<-2001
 
 ##########################################################################
 # subset microclimate output files for relevant dates
-ystart<-2013
-yfinish<-ystart
 nyears<-yfinish-ystart+1
 month<-1
 # chose period to simulate
@@ -323,29 +323,9 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
   if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}
   Tc_init<-Tbs[nrow(Tbs),2]
   subtime<-subset(times,times>Tbs[nrow(Tbs),1])
-#   if(Tc_init<vtmin & arvo_colour==0){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, do afternoon basking
-#    arvo_colour<-1
-#    indata$colchange<-colchange*1
-#    indata$lastt<-subtime[1]
-#   Tairf<-Tairf_sun
-#   Tradf<-Tradf_sun
-#   Qsolf<-Qsolf_sun
-#   Tbs<-warming() # now go foraging again in the sun
-#   abs<-Tbs$abs
-#   indata$abs<-abs[length(abs)]
-#   Tbs<-Tbs[,1:5]  
-#   Tbs$posture<-0
-#   Tbs$active<-1
-#   Tbs$state<-2 
-#   Tbs$abs<-abs  
-#   if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}
-#   Tc_init<-Tbs[nrow(Tbs),2]
-#   subtime<-subset(times,times>Tbs[nrow(Tbs),1])
-#   if(length(subtime)==0){break}
-#   }
-  if(Tc_init<vtmin & arvo_colour==0){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, do afternoon basking
-   indata$posture<-'n' 
-   indata$colchange<-0
+  if(Tc_init<vtmin){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, try changing colour if allowed
+   indata$posture<-'b' 
+   indata$colchange<-colchange*1
    indata$lastt<-subtime[1]
    Tairf<-Tairf_sun
    Tradf<-Tradf_sun
@@ -354,9 +334,11 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
    abs<-Tbs$abs
    indata$abs<-abs[length(abs)]
    Tbs<-Tbs[,1:5]   
-   Tbs$posture<-1
+   Tbs$posture<-0
    Tbs$active<-0 
-   Tbs$state<-1   
+   Tbs$state<-1  
+   Tbs$active[Tbs$Tb>vtmin]<-1 
+   Tbs$state[Tbs$Tb>vtmin]<-2 
    Tbs$abs<-abs  
    if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs} 
    Tc_init<-Tbs[nrow(Tbs),2]
@@ -515,7 +497,7 @@ text(micro_shd[3,1],35,paste("arvo ",round(sumstat[,9],0)," mins",sep=""))
         
 contourplot<-as.data.frame(contourplot)
 sumstats<-as.data.frame(sumstats)
-dates2<-seq(ISOdate(ystart,1,1,tz=tzone)-3600*12, ISOdate((ystart+nyears),1,1,tz=tzone)-3600*13, by="days")
+dates2<-seq(ISOdate(ystart,1,1,tz=tzone)-3600*12, ISOdate((ystart+1),1,1,tz=tzone)-3600*13, by="days")
 sumstats<-cbind(dates2,sumstats)
 contourplot<-cbind(dates,contourplot)
 
@@ -528,7 +510,6 @@ night<-subset(contourplot,zen==90)
 with(night,plot(hour~DOY,pch=15,cex=2,col='dark blue'))
 with(foraging,points(hour~DOY,pch=15,cex=forage.time.minute/20,col='green'))
 with(foraging,points(hour~DOY,pch=15,cex=forage.bout.minute/20,col='red'))
-sumstats
 
 
 

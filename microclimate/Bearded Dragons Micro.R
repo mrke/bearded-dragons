@@ -24,6 +24,8 @@
 # zoo
 # RODBC
 
+sites<-read.csv('beardie_sites.csv',stringsAsFactors=FALSE)
+for(mm in 1:nrow(sites)){
 ######################### model modes ###########################################################
 mac<-0 # choose mac (1) or pc (0) 
 writecsv<-0 # make Fortran code write output as csv files
@@ -39,15 +41,16 @@ rungads<-1 # use the Global Aerosol Database?
 
 ############## location and climatic data  ###################################
 spatial<-"c:/Australian Environment/" # place where climate input files are kept
-sitemethod <- 1 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
+sitemethod <- 0 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
 longlat<-c(147.829971,-42.557127) #central plateau c(146.5666667,-41.85) Orford c(147.829971,-42.557127) 
+longlat<-c(sites[mm,3],sites[mm,2])
 loc <- "Walpeup, Victoria" # type in a location here, used if option 1 is chosen above
 timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
 dailywind<-1 # use daily windspeed database?
 terrain<-0 # include terrain (slope, aspect, horizon angles) (1) or not (0)?
 soildata<-1 # include soil data for Australia (1) or not (0)?
-ystart<-2013
-yfinish<-2013
+ystart<-1997
+yfinish<-2001
 nyears<-yfinish-ystart+1# integer, number of years for which to run the microclimate model, only for AWAP data (!!max 10 years!!)
 
 DEP <- c(0., 2.5, 5.,  10., 15., 20., 30., 50.,  100., 200.) # Soil nodes (cm) - keep spacing close near the surface, last value is where it is assumed that the soil temperature is at the annual mean air temperature
@@ -206,8 +209,10 @@ source('NicheMapR_Setup_micro.R')
 nicheout<-NicheMapR(niche)
 setwd(maindir)
 
-microdir<-'microclimate/'
-
+microdir<-paste('microclimate/',sites[mm,1],"/",sep="")
+if(exists(microdir)==FALSE){
+  dir.create(microdir)
+}
 
 # get output
 dim<-nicheout$dim
@@ -251,6 +256,8 @@ write.csv(rainfall,paste(microdir,'rainfall.csv',sep=""))
 write.csv(ectoin,paste(microdir,'ectoin.csv',sep=""))
 write.csv(DEP,paste(microdir,'DEP.csv',sep=""))
 write.csv(MAXSHADES,paste(microdir,'MAXSHADES.csv',sep=""))
+
+} # end loop through sites
 
 if(!require(geonames)){
   stop('package "geonames" is required.')
