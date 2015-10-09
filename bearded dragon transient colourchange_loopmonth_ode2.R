@@ -1,18 +1,22 @@
 ############# ectotherm model parameters ################################
 library(deSolve)
+
+# key parameters to play with
 microin<-"microclimate" # subfolder containing the microclimate input data
+mass<-319 # grams
+vtmax<-38 # voluntary maximum Tb
+vtmin<-32 # voluntary minimum Tb
+tlighten<-35 # Tb at which animal starts to lighten body when warming
+baskthresh<-18 # min temp before animal will move to a basking spot
+abs_min<-0.62 # minimum animal solar absorptivity
+abs_max<-0.90 # maximum animal solar absorptivity
+abs_ref<-0.76 # animal solar absorptivity, no colour change
+colour_rate<-0.05/60 # rate of increase or decrease in absorptivity, proportion/second
+colourchanger<-1 # 1 or 0
+simstart<-1 # day of year to start simulation
+simfinish<-1 # day of year to finish simulation
 
-# colour change options
-# constant 1 0.85
-# constant 2 0.72
-# constant 3 0.785
-# variable 1 20% change declining from a starting abs of 0.9 down to 0.82 in 1% intervals
-# variable 2 increase change by 1% jumps from 1% (0.5% either side) to 10%, from base of 0.785
-# variable 3 increase change by 1% jumps from 1% (0.5% either side) to 18%, from base of 0.76
-
-
-# variable 1: 0.9
-
+##########################################################################
 # subset microclimate output files for relevant dates
 ystart<-2013
 yfinish<-ystart
@@ -21,19 +25,6 @@ month<-1
 # chose period to simulate
 daystart<-paste(substr(ystart,3,4),'/01/01',sep="") # y/m/d
 dayfin<-daystart # y/m/d
-
-# key parameters to play with
-mass<-319 # grams
-vtmax<-38 # voluntary maximum Tb
-vtmin<-32 # voluntary minimum Tb
-baskthresh<-18 # min temp before animal will move to a basking spot
-abs_min<-0.0 # minimum animal solar absorptivity
-abs_max<-1 # maximum animal solar absorptivity
-abs_ref<-0.76 # animal solar absorptivity, no colour change
-colour_rate<-0.05/60 # rate of increase or decrease in absorptivity, proportion/second
-colourchanger<-1 # 1 or 0
-simstart<-1 # day of year to start simulation
-simfinish<-1 # day of year to finish simulation
 
 windfact<-1 # factor to multiply predicted wind by
 metout<-read.csv(paste(microin,'/metout.csv',sep=""))[,-1]
@@ -165,6 +156,10 @@ toocold <- function (t, y, pars) { # if Tb exceeds voluntary min foraging temp, 
 eventfun <- function(t, y, pars) {
   return(y = 1)
 }
+lighten <- function (t, y, pars) { # if temperature exceeds voluntary max Tb or is lower than voluntary minimum, trigger 'toohot' event
+  if(y>=tlighten){y<-0}
+  return(y)
+}
 
 morning<-function(){
 Tbs_ode<-as.data.frame(ode(y=Tc_init,times=subtime,func=onelump_varenv,parms=indata,events = list(func = eventfun, root = TRUE, terminalroot = 1),
@@ -194,6 +189,13 @@ colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc','abs')
 return(Tbs_ode)  
 }
 
+gobright<-function(){  
+Tbs_ode<-as.data.frame(ode(y=Tc_init,times=subtime,func=onelump_varenv,parms=indata,events = list(func = eventfun, root = TRUE, terminalroot = 1),
+           rootfun = lighten,method='lsoda'))
+colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc','abs')  
+return(Tbs_ode)  
+}
+
 Tc_init<-Tairf_shd(0) # start with Tb at shaded air temp
 
 times<-seq(0,3600*24,10) # sequence of seconds for a day
@@ -204,6 +206,7 @@ out<-0 # initial foraging state
 bask<-1 # initial basking state
 daybreak<-0 # initialise daybreak even counter
 posture<-'n' # initial postural state
+arvo_colour<-0 # initial afternoon colour change state
 rm(dayresults) # clear the results, if any already in the memory
 
 arvo<-times[(length(times)/2):length(times)] # second half of day
@@ -256,9 +259,21 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
    subtime<-subset(times,times>Tbs[nrow(Tbs),1]) # exclude basking time from next simulation
    if(length(subtime)==0){break} # stop if got through the rest of the day simply basking
    indata$posture<-'b' # has now got to foraging temp, change to foraging posture
-   indata$colchange<-colchange*-1
    indata$lastt<-subtime[1]
-   Tbs<-warming() # simulate warming until it gets too hot
+   Tbs<-gobright() # warm until threshold for lightening
+   abs<-Tbs$abs
+   indata$abs<-abs[length(abs)]
+   Tbs<-Tbs[,1:5]
+   Tbs$posture<-0
+   Tbs$active<-1
+   Tbs$state<-2
+   Tbs$abs<-abs  
+   if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}  
+   Tc_init<-Tbs[nrow(Tbs),2]
+   subtime<-subset(times,times>Tbs[nrow(Tbs),1])   
+   indata$lastt<-subtime[1]
+   indata$colchange<-colchange*-1
+   Tbs<-warming() # continue warming until it gets too hot
    abs<-Tbs$abs
    indata$abs<-abs[length(abs)]
    Tbs<-Tbs[,1:5]
@@ -308,10 +323,29 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
   if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}
   Tc_init<-Tbs[nrow(Tbs),2]
   subtime<-subset(times,times>Tbs[nrow(Tbs),1])
-  Tc_init
-  if(Tc_init<vtmin){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, do afternoon basking
+#   if(Tc_init<vtmin & arvo_colour==0){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, do afternoon basking
+#    arvo_colour<-1
+#    indata$colchange<-colchange*1
+#    indata$lastt<-subtime[1]
+#   Tairf<-Tairf_sun
+#   Tradf<-Tradf_sun
+#   Qsolf<-Qsolf_sun
+#   Tbs<-warming() # now go foraging again in the sun
+#   abs<-Tbs$abs
+#   indata$abs<-abs[length(abs)]
+#   Tbs<-Tbs[,1:5]  
+#   Tbs$posture<-0
+#   Tbs$active<-1
+#   Tbs$state<-2 
+#   Tbs$abs<-abs  
+#   if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}
+#   Tc_init<-Tbs[nrow(Tbs),2]
+#   subtime<-subset(times,times>Tbs[nrow(Tbs),1])
+#   if(length(subtime)==0){break}
+#   }
+  if(Tc_init<vtmin & arvo_colour==0){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, do afternoon basking
    indata$posture<-'n' 
-   indata$colchange<-colchange*1
+   indata$colchange<-0
    indata$lastt<-subtime[1]
    Tairf<-Tairf_sun
    Tradf<-Tradf_sun
@@ -345,7 +379,7 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
    Tc_init<-Tbs[nrow(Tbs),2]
    subtime<-subset(times,times>Tbs[nrow(Tbs),1])
    if(length(subtime)==0){break}
-  }
+  }  
 }
 if(length(subtime)==0){ # now simulate the evening
 subtime<-evening[,1]
