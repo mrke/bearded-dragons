@@ -1,6 +1,6 @@
 ############# ectotherm model parameters ################################
 library(deSolve)
-microin<-"microclimate" # subfolder containing the microclimate input data
+microin<-"microclimate/" # subfolder containing the microclimate input data
 
 # colour change options
 # constant 1 0.85
@@ -14,17 +14,9 @@ microin<-"microclimate" # subfolder containing the microclimate input data
 # variable 1: 0.9
 
 # get input microclimate files and read them in
- file.copy('/git/micro_australia/metout.csv',paste(microin,'/metout.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/shadmet.csv',paste(microin,'/shadmet.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/soil.csv',paste(microin,'/soil.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/shadsoil.csv',paste(microin,'/shadsoil.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/rainfall.csv',paste(microin,'/rainfall.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/ectoin.csv',paste(microin,'/ectoin.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/DEP.csv',paste(microin,'/DEP.csv',sep=""),overwrite=TRUE)
- file.copy('/git/micro_australia/MAXSHADES.csv',paste(microin,'/MAXSHADES.csv',sep=""),overwrite=TRUE)
 
 # subset microclimate output files for relevant dates
-ystart<-1990
+ystart<-2013
 yfinish<-ystart
 nyears<-yfinish-ystart+1
 month<-1
@@ -580,7 +572,7 @@ points(plotdayresults$Abs*10~plotdayresults$datetime,type='l',col="orange")
 #points(plotdayresults$active*5~plotdayresults$datetime,type='l',col="red")
 abline(vtmax,0,col='red',lty=2)
 abline(vtmin,0,col='light blue',lty=2)
-#points(plotdayresults$state*5~plotdayresults$datetime,type='l',col="brown")
+points(plotdayresults$state*5~plotdayresults$datetime,type='l',col="brown")
 text(micro_shd[3,1],70,paste("bouts ",round(sumstat[,4],0),sep=""))
 text(micro_shd[3,1],65,paste("maxrun ",round(sumstat[,2],0)," mins",sep=""))
 text(micro_shd[3,1],60,paste("sumact ",round(sumstat[,3],0)," mins",sep=""))

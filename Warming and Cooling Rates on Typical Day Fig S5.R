@@ -93,14 +93,14 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
   
   #Tbs<-as.data.frame(ode(y=Tc_init,times=seq(0,3600*2,1),func=transient,parms=input))
   times=seq(0,3600,10)
-  thresh<-35
+  thresh<-18.7
   results<-onelump(times, Tc_init, thresh, input)
   Tbs<-as.data.frame(cbind(times,results$Tc))
   colnames(Tbs)<-c('time','Tb')
   dTbs<-as.data.frame(cbind(times,results$dTc*60)) # rates of change in deg C per min
   colnames(dTbs)<-c('time','dTb')
   final_temp<-results$Tcf
-  time.to.35<-results$timethresh
+  time.to.18.7<-results$timethresh
   tau<-results$tau
   Tbs$time<-Tbs$time/60 #convert to minutes
   rate<-if(Tc_init==10){max(dTbs$dTb)}else{min(dTbs$dTb)}
@@ -113,9 +113,9 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
 
   #with(dTbs,{plot(dTb~time,type='l',col='red')})
   if(i==1 & j==1 & k==1 & m==1){
-    Tpred<-cbind.data.frame(abs,final_temp,posture,Tc_init,time.to.35,tau,rate) # need to bind the predicted temperature, time to thresh and tau with the selected posture and initial temp, turn it into a data frame and then transpose it so it is a row
+    Tpred<-cbind.data.frame(abs,final_temp,posture,Tc_init,time.to.18.7,tau,rate) # need to bind the predicted temperature, time to thresh and tau with the selected posture and initial temp, turn it into a data frame and then transpose it so it is a row
   }else{
-    Tpred<-rbind.data.frame(Tpred,cbind.data.frame(abs,final_temp,posture,Tc_init,time.to.35,tau,rate)) # row bind it to the previous result
+    Tpred<-rbind.data.frame(Tpred,cbind.data.frame(abs,final_temp,posture,Tc_init,time.to.18.7,tau,rate)) # row bind it to the previous result
   }
   cat(i,'\n')
 } #end loop through observations in 'data'
@@ -124,7 +124,7 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
 } #end loop through postures
 
 data_final<-cbind.data.frame(rep(seq(8,16),4),Tpred,rbind.data.frame(data,data,data,data)) # put the final set of results (Tb and posture) together with the environmental data (but need two sets of environmental data, one for each posture)
-colnames(data_final)[1:8]<-c('hour','absorb','Tcfinal','posture','Tc_init','Time.to.35','tau','rate')
+colnames(data_final)[1:8]<-c('hour','absorb','Tcfinal','posture','Tc_init','Time.to.18.7','tau','rate')
 
 plot(rate~hour,data=subset(data_final,absorb==0.92 & Tc_init==10 & posture=='n'),type='b',col='black',main='warming',ylab='max rate, C/min')
 points(rate~hour,data=subset(data_final,absorb==0.77 & Tc_init==10 & posture=='n'),type='b',col='grey')

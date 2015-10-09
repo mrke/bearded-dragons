@@ -27,12 +27,15 @@ mass<-319 # grams
 vtmax<-38 # voluntary maximum Tb
 vtmin<-32 # voluntary minimum Tb
 baskthresh<-18 # min temp before animal will move to a basking spot
-abs_min<-0.62 # minimum animal solar absorptivity
-abs_max<-0.90 # maximum animal solar absorptivity
+abs_min<-0.0 # minimum animal solar absorptivity
+abs_max<-1 # maximum animal solar absorptivity
 abs_ref<-0.76 # animal solar absorptivity, no colour change
+colour_rate<-0.05/60 # rate of increase or decrease in absorptivity, proportion/second
+colourchanger<-1 # 1 or 0
+simstart<-1 # day of year to start simulation
+simfinish<-1 # day of year to finish simulation
 
 windfact<-1 # factor to multiply predicted wind by
-
 metout<-read.csv(paste(microin,'/metout.csv',sep=""))[,-1]
 shadmet<-read.csv(paste(microin,'/shadmet.csv',sep=""))[,-1]
 soil<-read.csv(paste(microin,'/soil.csv',sep=""))[,-1]
@@ -74,8 +77,8 @@ times2<-times2*60 # minutes to seconds
 time3<-time3*60
 
 
-source('/git/OneLumpTrans/OneLumpAnalytical.R') # load the analytical one lump model
-source('/git/OneLumpTrans/OneLump_varenv_noskin.R') # load source for ode solver version without evaporation and Tskin
+source('/git/OneLumpTrans/OneLumpAnalyticalColChange.R') # load the analytical one lump model
+source('/git/OneLumpTrans/OneLump_varenv_noskinColChange.R') # load source for ode solver version without evaporation and Tskin
 
 # constants
 cp<-3073 #specific heat of flesh, J/kg-C
@@ -115,7 +118,7 @@ shade<-0.9
 sumstats<-matrix(data = NA, nrow = nrow(metout)/24, ncol = 9, byrow = FALSE, dimnames = NULL)
 contourplot<-matrix(data = NA, nrow = nrow(metout), ncol = 5, byrow = FALSE, dimnames = NULL)
 
-for(simday in 1:1){#(nrow(metout)/24)){
+for(simday in simstart:simfinish){#(nrow(metout)/24)){
 micro_sun<-subset(micro_sun_all, micro_sun_all$JULDAY==simday)
 micro_shd<-subset(micro_shd_all,micro_shd_all$JULDAY==simday)
 #micro_shd<-subset(micro_shd_all, as.numeric(format(as.POSIXlt(micro_shd_all$dates), "%d"))==simday)
@@ -133,14 +136,16 @@ Zenf<- approxfun(time, c(micro_sun[,8],90), rule = 2)
 #times<-seq(0,3600*24*(days+1),10) # sequence of seconds for a day
 #hours<-times/3600
 
-colourchanger<-0
 if(colourchanger==1){
   abs<-abs_max # hottest possible
+  colchange<-colour_rate
 }else{
-  abs<-0.85
+  abs<-abs_ref
+  colchange<-0
 }
 
-indata<-list(thresh=vtmax,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif)
+lastt<-0
+indata<-list(thresh=vtmax,q=q,cp=cp,emis=emis,Fo_e=Fo_e,rho=rho,abs=abs,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,mass=mass,sub_reflect=sub_reflect,pctdif=pctdif,colchange=colchange,lastt=lastt,abs_max=abs_max,abs_min=abs_min,vtmin=vtmin,vtmax=vtmax)
 
 emerge <- function (t, y, pars) { # if sun is up and body temperature greater than threshold for basking, then trigger emerge event
   if(Zenf(t)!=90 & y>baskthresh){y<-0}
@@ -164,28 +169,28 @@ eventfun <- function(t, y, pars) {
 morning<-function(){
 Tbs_ode<-as.data.frame(ode(y=Tc_init,times=subtime,func=onelump_varenv,parms=indata,events = list(func = eventfun, root = TRUE, terminalroot = 1),
            rootfun = emerge,method='lsoda'))
-colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc')  
+colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc','abs')  
 return(Tbs_ode)
 }
 
 afternoon<-function(){
 Tbs_ode<-as.data.frame(ode(y=Tc_init,times=subtime,func=onelump_varenv,parms=indata,events = list(func = eventfun, root = TRUE, terminalroot = 1),
            rootfun = retreat,method='lsoda'))
-colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc')  
+colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc','abs')  
 return(Tbs_ode)
 }
 
 warming<-function(){
 Tbs_ode<-as.data.frame(ode(y=Tc_init,times=subtime,func=onelump_varenv,parms=indata,events = list(func = eventfun, root = TRUE, terminalroot = 1),
            rootfun = toohot,method='lsoda'))
-colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc')  
+colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc','abs')  
 return(Tbs_ode)
 }
 
 cooling<-function(){  
 Tbs_ode<-as.data.frame(ode(y=Tc_init,times=subtime,func=onelump_varenv,parms=indata,events = list(func = eventfun, root = TRUE, terminalroot = 1),
            rootfun = toocold,method='lsoda'))
-colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc')  
+colnames(Tbs_ode)<-c('time','Tb','Tcfinal','tau','dTc','abs')  
 return(Tbs_ode)  
 }
 
@@ -213,10 +218,15 @@ subtime<-times # starting times to work with
 while(length(subtime)>0){ # now go through the non-evening times and check for daybreak
   if(daybreak==0){ # start of the simulation, sun is not up yet, keep it in the shade and inactive until sun comes up
    indata$posture<-'b'
+   indata$colchange<-0
+   indata$lastt<-subtime[1]
    Tairf<-Tairf_shd # choose shaded environment
    Tradf<-Tradf_shd
    Qsolf<-Qsolf_shd
    Tbs<-morning() # get Tbs until sun rises and basking threshold is reached
+   abs<-Tbs$abs
+   indata$abs<-abs[length(abs)]
+   Tbs<-Tbs[,1:5]
    Tbs$posture<-0
    Tbs$active<-0 
    Tbs$state<-0  
@@ -228,10 +238,15 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
   }
   while(bask==1 & length(subtime)>0){ # now in the basking period
    indata$posture<-'n' # change posture to be normal to the sun - basking
+   indata$colchange<-0
+   indata$lastt<-subtime[1]
    Tairf<-Tairf_sun # choose full sun environment
    Tradf<-Tradf_sun
    Qsolf<-Qsolf_sun
    Tbs<-cooling() # simulate Tb until it reaches VTmin - i.e. until it can forage
+   abs<-Tbs$abs
+   indata$abs<-abs[length(abs)]
+   Tbs<-Tbs[,1:5]
    Tbs$posture<-1
    Tbs$active<-0 
    Tbs$state<-1 
@@ -241,7 +256,12 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
    subtime<-subset(times,times>Tbs[nrow(Tbs),1]) # exclude basking time from next simulation
    if(length(subtime)==0){break} # stop if got through the rest of the day simply basking
    indata$posture<-'b' # has now got to foraging temp, change to foraging posture
+   indata$colchange<-colchange*-1
+   indata$lastt<-subtime[1]
    Tbs<-warming() # simulate warming until it gets too hot
+   abs<-Tbs$abs
+   indata$abs<-abs[length(abs)]
+   Tbs<-Tbs[,1:5]
    Tbs$posture<-0
    Tbs$active<-1
    Tbs$state<-2
@@ -264,6 +284,9 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
   Tradf<-Tradf_shd
   Qsolf<-Qsolf_shd
   Tbs<-cooling() # simulate cooling in shade
+  abs<-Tbs$abs
+  indata$abs<-abs[length(abs)]
+  Tbs<-Tbs[,1:5]
   Tbs$posture<-0
   Tbs$active<-0
   Tbs$state<-3 
@@ -275,6 +298,9 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
   Tradf<-Tradf_sun
   Qsolf<-Qsolf_sun
   Tbs<-warming() # now go foraging again in the sun
+  abs<-Tbs$abs
+  indata$abs<-abs[length(abs)]
+  Tbs<-Tbs[,1:5]  
   Tbs$posture<-0
   Tbs$active<-1
   Tbs$state<-2 
@@ -285,10 +311,15 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
   Tc_init
   if(Tc_init<vtmin){ # keep checking if Tb has gotten below the minimum voluntary foraging temp, and if so, do afternoon basking
    indata$posture<-'n' 
+   indata$colchange<-colchange*1
+   indata$lastt<-subtime[1]
    Tairf<-Tairf_sun
    Tradf<-Tradf_sun
    Qsolf<-Qsolf_sun
    Tbs<-afternoon()
+   abs<-Tbs$abs
+   indata$abs<-abs[length(abs)]
+   Tbs<-Tbs[,1:5]   
    Tbs$posture<-1
    Tbs$active<-0 
    Tbs$state<-1   
@@ -298,10 +329,14 @@ while(length(subtime)>0){ # now go through the non-evening times and check for d
    subtime<-subset(times,times>Tbs[nrow(Tbs),1])  
    if(length(subtime)==0){break}  
    indata$posture<-'b' # if got this far, time to retreat to the shade in prep for the evening
+   indata$lastt<-subtime[1]
    Tairf<-Tairf_shd
    Tradf<-Tradf_shd
    Qsolf<-Qsolf_shd
    Tbs<-morning()
+   abs<-Tbs$abs
+   indata$abs<-abs[length(abs)]
+   Tbs<-Tbs[,1:5]   
    Tbs$posture<-0
    Tbs$active<-0 
    Tbs$state<-0  
@@ -316,10 +351,14 @@ if(length(subtime)==0){ # now simulate the evening
 subtime<-evening[,1]
 }
 indata$posture<-'b'
+indata$lastt<-subtime[1]
 Tairf<-Tairf_shd
 Tradf<-Tradf_shd
 Qsolf<-Qsolf_shd
 Tbs<-morning() # simulate animal cooling down in shade through the night
+abs<-Tbs$abs
+indata$abs<-abs[length(abs)]
+Tbs<-Tbs[,1:5]
 Tbs$posture<-0
 Tbs$active<-0 
 Tbs$state<-0  
@@ -422,6 +461,7 @@ plotdayresults<-as.data.frame(dayresults)
 plot(plotdayresults$Tb~dates4,ylim=c(-5,70),type='l',col="dark green",main=as.Date(micro_shd[24,1],format=c("%Y-%m-%d")))
 #points(plotdayresults$Te~plotdayresults$datetime,type='l',col="black")
 points(micro_shd$TALOC~micro_shd$dates,type='l',col='blue')
+points(ZEN*.1~dates,data=subset(micro_shd,ZEN==90),type='p',col='grey')
 points(plotdayresults$abs*10~plotdayresults$dates4,type='l',col="orange")
 #points(plotdayresults$active*5~plotdayresults$datetime,type='l',col="red")
 abline(vtmax,0,col='red',lty=2)
@@ -452,9 +492,9 @@ foraging<-subset(contourplot,forage.time.minute>0)
 
 night<-subset(contourplot,zen==90)
 with(night,plot(hour~DOY,pch=15,cex=2,col='dark blue'))
-with(foraging,points(hour~DOY,pch=15,cex=forage.time.minute/50,col='orange'))
-with(foraging,points(hour~DOY,pch=15,cex=forage.bout.minute/50,col='red'))
-#sumstats
+with(foraging,points(hour~DOY,pch=15,cex=forage.time.minute/20,col='green'))
+with(foraging,points(hour~DOY,pch=15,cex=forage.bout.minute/20,col='red'))
+sumstats
 
 
 
