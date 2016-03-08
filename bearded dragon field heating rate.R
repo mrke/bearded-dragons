@@ -43,9 +43,9 @@ BulkDensity <- BD[seq(1,19,2)]*1000 #soil bulk density, kg/m3
 # run microclimate model to get microclimate for ectotherm model and soil temps for predicting egg development and food availability
 micro<-micro_aust(loc = longlat, ystart = ystart, yfinish = yfinish, PE = PE, BB = BB, BD = 
     BD, KS = KS, BulkDensity = BulkDensity, maxshade = 90, Usrhyt = 0.03, DEP = DEP, REFL = 0.2)
-save(micro,file = 'micro.Rda')
+#save(micro,file = 'micro.Rda')
 
-load('micro.Rda')
+#load('micro.Rda')
 metout<-as.data.frame(micro$metout)
 soil<-as.data.frame(micro$soil)
 shadmet<-as.data.frame(micro$shadmet)
@@ -84,7 +84,7 @@ shade<-1 # fractional shade cover (to correct solar radiation by)
 
 # subsetting appropriate microclimate conditions 
 simstart<-1 # day of year to start simulation
-simfinish<-2 # day of year to finish simulation
+simfinish<-365 # day of year to finish simulation
 daystart<-paste(substr(ystart,3,4),'/01/01',sep="") # y/m/d
 dayfin<-paste(substr(ystart,3,4),'/12/31',sep="") # y/m/d # y/m/d
 tzone<-paste("Etc/GMT-",10,sep="") # doing it this way ignores daylight savings!
@@ -169,28 +169,20 @@ for(simday in simstart:simfinish){
   for(j in 1:length(absorbs)){ 
     
     ABS<-absorbs[j] # set thsi simulation's solar absorptivity
-
+    
     indata<-list(Tc_init=Tc_init,thresh=vtmin,q=q,Spheat=cp,EMISAN=emis,rho=rho,ABS=ABS,lometry=lometry,customallom=customallom,shape_a=shape_a,shape_b=shape_b,shape_c=shape_c,posture=posture,FATOSK=FATOSK,FATOSB=FATOSB,AMASS=mass,sub_reflect=sub_reflect,PCTDIF=pctdif,colchange=0,lastt=lastt,ABSMAX=ABS,ABSMIN=ABS)
     
-    times<-seq(0,3600*24,10) # sequence of seconds for a day
-    times<-times[1:(length(times)-1)]
+    times<-seq(0,3600*17,10) # sequence of seconds for a day - just to 5pm
     hours<-times/3600
     times_orig<-times
     out<-0 # initial foraging state
     bask<-1 # initial basking state
     daybreak<-0 # initialise daybreak even counter
-    posture<-'n' # initial postural state
     if(exists('dayresults')){rm(dayresults)} # clear the results, if any already in the memory
-    arvo<-times[(length(times)/2):length(times)] # second half of day
-    zeniths<-as.data.frame(cbind(arvo,Zenf(arvo))) # afternoon zenith angles
-    colnames(zeniths)<-c('time','zen')
-    evening<-subset(zeniths,zen==90) # evening times
-    sunset<-evening[1,1] # time of sunset
-    times<-times[times<sunset] # non-sunset times
     subtime<-times # starting times to work with
     
     # start simulation, in the shade waiting for daybreak and basking threshold
-    indata$posture<-'b'
+    indata$posture<-'n'
     indata$colchange<-0
     indata$lastt<-subtime[1]
     Tairf<-Tairf_shd # choose shaded environment
@@ -207,25 +199,27 @@ for(simday in simstart:simfinish){
     if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}  
     Tc_init<-Tbs[nrow(Tbs),2] # get initial temp for next behavioural phase
     subtime<-subset(times,times>Tbs[nrow(Tbs),1]) # get times post basking event, for the next behavioural phase
-    daybreak<-1 # sun has now risen
     
-    # now basking, waiting until hits voluntary minimum foraging temperature
-    indata$posture<-'n' # change posture to be normal to the sun - basking
-    indata$colchange<-0
-    indata$lastt<-subtime[1]
-    Tairf<-Tairf_sun # choose full sun environment
-    Tradf<-Tradf_sun
-    Qsolf<-Qsolf_sun
-    Tbs<-cooling() # simulate Tb until it reaches VTmin - i.e. until it can forage
-    ABS<-Tbs$ABS
-    indata$ABS<-ABS[length(ABS)]
-    Tbs<-Tbs[,1:5]
-    Tbs$posture<-1
-    Tbs$active<-0 
-    Tbs$state<-1 
-    Tbs$ABS<-ABS
-    if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}  
     
+    if(length(subtime)>0){
+      daybreak<-1 # sun has now risen
+      # now basking, waiting until hits voluntary minimum foraging temperature
+      indata$posture<-'n' # change posture to be normal to the sun - basking
+      indata$colchange<-0
+      indata$lastt<-subtime[1]
+      Tairf<-Tairf_sun # choose full sun environment
+      Tradf<-Tradf_sun
+      Qsolf<-Qsolf_sun
+      Tbs<-cooling() # simulate Tb until it reaches VTmin - i.e. until it can forage
+      ABS<-Tbs$ABS
+      indata$ABS<-ABS[length(ABS)]
+      Tbs<-Tbs[,1:5]
+      Tbs$posture<-1
+      Tbs$active<-0 
+      Tbs$state<-1 
+      Tbs$ABS<-ABS
+      if(exists('dayresults')){dayresults<-rbind(dayresults,Tbs)}else{dayresults<-Tbs}  
+    }
     # simulation finished, do some data processing
     dayresults$state[dayresults$Tb<vtmin-0.1 & dayresults$state!=1] <- 0
     dayresults$active[dayresults$Tb<vtmin-0.1] <- 0
@@ -235,18 +229,23 @@ for(simday in simstart:simfinish){
     interval<-length(times_orig)
     hrs<-dayresults[,1]/3600
     dates4<-seq(ISOdate(paste(substr(ystart,1,2),substr(daystart,1,2),sep=''),substr(daystart,4,5),substr(daystart,7,8),tz=tzone)-3600*12, ISOdate(paste(substr(ystart,1,2),substr(dayfin,1,2),sep=''),substr(dayfin,4,5),substr(dayfin,7,8),tz=tzone)-3600*12+3600*24, 10)
-    dates4<-seq(as.POSIXct(micro_sun[1,1]),as.POSIXct(micro_sun[1,1]+3600*13), 10)
+    dates4<-seq(as.POSIXct(micro_sun[1,1]),as.POSIXct(micro_sun[1,1]+3600*17), 10)
     dayresults<-cbind(dayresults,dates4[1:nrow(dayresults)])
     interval<-length(times_orig)
+    subtime<-subset(times,times>Tbs[nrow(Tbs),1]) # get times post basking event, for the next behavioural phase
     
     # now summarize lenght of morning basking bout
     Hour<-trunc(dayresults[,1]/3600)
     dayresults<-cbind(Hour,dayresults)
     z <- rle(dayresults[,9])
-    morning.bask<-z$lengths[z$values==1][1]/(interval/24)*60
+    if(length(subtime)>0){
+      morning.bask<-z$lengths[z$values==1][1]/(interval/24)*60
+    }else{
+      morning.bask=NA
+    }
     
     # save time to bask, max Tb, and basking time saved
-    if(ABS==0.77){
+    if(ABS[1]==0.77){
       sumstats[simday-simstart+1,1]=simday
       sumstats[simday-simstart+1,2]=morning.bask
       sumstats[simday-simstart+1,4]=max(dayresults$Tb)
@@ -263,8 +262,11 @@ for(simday in simstart:simfinish){
     
     # plot results
     plotdayresults<-as.data.frame(dayresults)
-    if(ABS==0.77){
-      plot(micro_shd$TALOC[4:13]~micro_shd$dates[4:13],type='l',ylab='',xlab='time of day',ylim=c(5,32),col='white',main=as.Date(micro_shd[24,1],format=c("%Y-%m-%d")))
+    if(ABS[1]==0.77){
+      plot(micro_shd$TALOC[4:17]~micro_shd$dates[4:17],type='l',ylab='',xlab='time of day',ylim=c(5,32),col='white',xaxt = "n",main=as.Date(micro_shd[24,1],format=c("%Y-%m-%d")))
+      axis.POSIXct(side = 1, x = micro_shd$dates,
+        at = seq(micro_shd$dates[4], micro_shd$dates[17], "hours"), format = "%H:%M",
+        las = 2)
       points(plotdayresults$Tb~plotdayresults$dates4,type='l',col="orange")
       sunrise=subset(micro_shd,TIME<60*12)
       sunrise=as.data.frame(subset(sunrise,ZEN==90))
@@ -273,17 +275,33 @@ for(simday in simstart:simfinish){
       abline(vtmin,0,col='light blue',lty=2)
       text(sunrise$dates[1],vtmin-1.5,"VTmin",col="light blue",pos=4,cex=1.5)
       text(sunrise$dates[1],30,"sunrise",col="grey",srt=90,pos=2,cex=1.5)
-      text(micro_shd[10,1],8.2,paste("mornbask 77% abs ",round(morning.bask,0)," mins",sep=""),col='orange',cex=1)
+      text(micro_shd[14,1],8.2,paste("mornbask 77% abs ",round(morning.bask,0)," mins",sep=""),col='orange',cex=1)
     }else{
-      points(plotdayresults$Tb~plotdayresults$dates4,type='l',col="dark grey")
-      text(micro_shd[10,1],6.7,paste("mornbask 92% abs ",round(morning.bask,0)," mins",sep=""),col='dark grey',cex=1)
-      text(micro_shd[10,1],4.9,paste("saving of ",round(sumstats[simday-simstart+1,6],0)," mins",sep=""),col='black',cex=1)
+      points(plotdayresults$Tb~plotdayresults$dates4,type='l',col="dark grey",lty=2)
+      text(micro_shd[14,1],6.7,paste("mornbask 92% abs ",round(morning.bask,0)," mins",sep=""),col='dark grey',cex=1)
+      text(micro_shd[14,1],4.9,paste("saving of ",round(sumstats[simday-simstart+1,6],0)," mins",sep=""),col='black',cex=1)
     }
     cat(paste('day ',simday,' done \n'),sep="")
   } # end loop through absorptivities
 } # end loop through days
 dev.off()
 
-plot(sumstats[,1],sumstats[,6],type='h',lwd=10, ylab='time saved, min', xlab='day of year',col='grey')
+sumstats<-as.data.frame(sumstats)
+colnames(sumstats)<-c('doy','lightbask','darkbask','lightTb','darkTb','diff')
+plot(sumstats$doy,sumstats$diff,type='h',lwd=2, ylab='time saved, min', xlab='day of year',col='grey',cex.lab=1.5,cex.axis=1.3)
+plot(sumstats$doy,sumstats$lightbask,type='h',lwd=2, ylab='time saved, min', xlab='day of year',col='orange')
+plot(sumstats$doy,sumstats$darkbask,type='h',lwd=2, ylab='time saved, min', xlab='day of year',col='brown')
+nrow(subset(sumstats,darkbask>0))
+nrow(subset(sumstats,lightbask>0))
+mean(sumstats$diff,na.rm=TRUE)
+
+write.csv(sumstats,'sumstats.csv')
 
 
+seasons<-c(rep('summer',59),rep('autumn',92),rep('winter',92),rep('spring',91),rep('summer',31))
+
+summer=subset(sumstats, sumstats[,1]<60 | sumstats[,1]>334)
+autumn=subset(sumstats, sumstats[,1]>60 & sumstats[,1]<=151)
+winter=subset(sumstats, sumstats[,1]>151 & sumstats[,1]<=243)
+spring=subset(sumstats, sumstats[,1]>243 & sumstats[,1]<=334)
+boxplot(summer[,6])
