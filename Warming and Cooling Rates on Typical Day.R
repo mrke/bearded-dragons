@@ -86,21 +86,21 @@ for(i in 1:nrow(data)){ # loop through each set of environmental conditions
   Trad<-mean(c(Tsurf,TSKY))
   
   
-  mass<-500
+  mass<-350
   q<-0
   kflesh<-0.5
   input<-c(kflesh,q,cp,emis,sigma,Fo_e,rho,abs,lometry,customallom,shape_a,shape_b,shape_c,posture,FATOSK,FATOSB,mass,sub_reflect,pctdif,Qsol,vel,Tair,Trad,Zen)
   
   #Tbs<-as.data.frame(ode(y=Tc_init,times=seq(0,3600*2,1),func=transient,parms=input))
   times=seq(0,3600,10)
-  thresh<-18.7
+  thresh<-32
   results<-onelump(times, Tc_init, thresh, input)
   Tbs<-as.data.frame(cbind(times,results$Tc))
   colnames(Tbs)<-c('time','Tb')
   dTbs<-as.data.frame(cbind(times,results$dTc*60)) # rates of change in deg C per min
   colnames(dTbs)<-c('time','dTb')
   final_temp<-results$Tcf
-  time.to.18.7<-results$timethresh
+  time.to.32<-results$timethresh
   tau<-results$tau
   Tbs$time<-Tbs$time/60 #convert to minutes
   rate<-if(Tc_init==10){max(dTbs$dTb)}else{min(dTbs$dTb)}

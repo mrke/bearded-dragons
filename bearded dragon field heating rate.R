@@ -75,8 +75,7 @@ shape_b<-3.16666666667
 shape_c<-0.6666666667
 FATOSK<-0.4 # configuration factor to sky
 FATOSB<-0.4 # configuration factor to substrate
-kflesh<-0.5 # thermal conductivity of flesh W/mK
-posture<-'b' # pointing normal 'n' or parallel 'p' to the sun's rays, or average 'b'?
+posture<-'n' # pointing normal 'n' or parallel 'p' to the sun's rays, or average 'b'?
 sub_reflect<-0.2 # solar reflectance of substrate
 pctdif<-0.1 # proportion of solar energy that is diffuse (rather than direct beam)
 q<-0 # metabolic rate (W/m3)
@@ -141,6 +140,7 @@ eventfun <- function(t, y, pars) {
 }
 
 pdf("basking_plots.pdf",paper="A4r",width=15,height=11) # doing this means you're going to make a pdf - comment this line out if you want to see them in R
+#pdf("basking_plots_sub.pdf",paper="A4r",width=15,height=11) # doing this means you're going to make a pdf - comment this line out if you want to see them in R
 par(mfrow = c(2,2)) # set up for 5 plots in 2 columns
 par(oma = c(2,2,2,2) + 0.1) # margin spacing stuff
 par(mar = c(3,3,2,2) + 0.1) # margin spacing stuff 
@@ -148,7 +148,7 @@ par(mgp = c(3,1,0) ) # margin spacing stuff
 
 # begin loop through days
 for(simday in simstart:simfinish){
-  
+#for(simday in c(11,30,75,120)){ # subset for figure 
   # subset the day's microclimate conditions
   micro_sun<-subset(micro_sun_all, micro_sun_all$JULDAY==simday)
   micro_shd<-subset(micro_shd_all,micro_shd_all$JULDAY==simday)
@@ -263,7 +263,7 @@ for(simday in simstart:simfinish){
     # plot results
     plotdayresults<-as.data.frame(dayresults)
     if(ABS[1]==0.77){
-      plot(micro_shd$TALOC[4:17]~micro_shd$dates[4:17],type='l',ylab='',xlab='time of day',ylim=c(5,32),col='white',xaxt = "n",main=as.Date(micro_shd[24,1],format=c("%Y-%m-%d")))
+      plot(micro_shd$TALOC[4:17]~micro_shd$dates[4:17],type='l',ylab=expression("body temperature (" * degree * C *")"),xlab='time of day',ylim=c(5,32),col='white',xaxt = "n",main=as.Date(micro_shd[24,1],format=c("%Y-%m-%d")))
       axis.POSIXct(side = 1, x = micro_shd$dates,
         at = seq(micro_shd$dates[4], micro_shd$dates[17], "hours"), format = "%H:%M",
         las = 2)
@@ -275,10 +275,10 @@ for(simday in simstart:simfinish){
       abline(vtmin,0,col='light blue',lty=2)
       text(sunrise$dates[1],vtmin-1.5,"VTmin",col="light blue",pos=4,cex=1.5)
       text(sunrise$dates[1],30,"sunrise",col="grey",srt=90,pos=2,cex=1.5)
-      text(micro_shd[14,1],8.2,paste("mornbask 77% abs ",round(morning.bask,0)," mins",sep=""),col='orange',cex=1)
+      text(micro_shd[14,1],8.2,paste("77% abs ",round(morning.bask,0)," mins",sep=""),col='orange',cex=1)
     }else{
       points(plotdayresults$Tb~plotdayresults$dates4,type='l',col="dark grey",lty=2)
-      text(micro_shd[14,1],6.7,paste("mornbask 92% abs ",round(morning.bask,0)," mins",sep=""),col='dark grey',cex=1)
+      text(micro_shd[14,1],6.7,paste("92% abs ",round(morning.bask,0)," mins",sep=""),col='dark grey',cex=1)
       text(micro_shd[14,1],4.9,paste("saving of ",round(sumstats[simday-simstart+1,6],0)," mins",sep=""),col='black',cex=1)
     }
     cat(paste('day ',simday,' done \n'),sep="")
@@ -291,17 +291,10 @@ colnames(sumstats)<-c('doy','lightbask','darkbask','lightTb','darkTb','diff')
 plot(sumstats$doy,sumstats$diff,type='h',lwd=2, ylab='time saved, min', xlab='day of year',col='grey',cex.lab=1.5,cex.axis=1.3)
 plot(sumstats$doy,sumstats$lightbask,type='h',lwd=2, ylab='time saved, min', xlab='day of year',col='orange')
 plot(sumstats$doy,sumstats$darkbask,type='h',lwd=2, ylab='time saved, min', xlab='day of year',col='brown')
-nrow(subset(sumstats,darkbask>0))
-nrow(subset(sumstats,lightbask>0))
+nrow(subset(sumstats,darkbask>0))-nrow(subset(sumstats,lightbask>0))
+
 mean(sumstats$diff,na.rm=TRUE)
+min(sumstats$diff,na.rm=TRUE)
+max(sumstats$diff,na.rm=TRUE)
 
 write.csv(sumstats,'sumstats.csv')
-
-
-seasons<-c(rep('summer',59),rep('autumn',92),rep('winter',92),rep('spring',91),rep('summer',31))
-
-summer=subset(sumstats, sumstats[,1]<60 | sumstats[,1]>334)
-autumn=subset(sumstats, sumstats[,1]>60 & sumstats[,1]<=151)
-winter=subset(sumstats, sumstats[,1]>151 & sumstats[,1]<=243)
-spring=subset(sumstats, sumstats[,1]>243 & sumstats[,1]<=334)
-boxplot(summer[,6])

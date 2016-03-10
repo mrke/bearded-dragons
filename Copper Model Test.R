@@ -319,6 +319,7 @@ TSKY<-((QRAD+QRADGR)/(SIGP))**(1./4.)-273
 Trad<-mean(c(Tsurf,TSKY))
 #Trad<-Tair
 mass<-892.5
+mass<-350
 
 input<-c(kflesh,q,cp,emis,sigma,Fo_e,rho,abs,lometry,customallom,shape_a,shape_b,shape_c,posture,FATOSK,FATOSB,mass,sub_reflect,pctdif,Qsol,vel,Tair,Trad,Zen)
 
